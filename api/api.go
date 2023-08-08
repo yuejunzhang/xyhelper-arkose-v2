@@ -60,7 +60,12 @@ func GetToken(r *ghttp.Request) {
 		Proxy:   config.PROXY,
 	})
 	if err != nil {
-		log.Panic(err)
+		g.Log().Error(ctx, getRealIP(r), err.Error())
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
 	}
 	defer reqCli.Close()
 	response, err := reqCli.Request(ctx, "post", url, requests.RequestOption{
@@ -69,6 +74,7 @@ func GetToken(r *ghttp.Request) {
 		Cookies: harRequest.Cookies,
 	})
 	if err != nil {
+		g.Log().Error(ctx, getRealIP(r), err.Error())
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
 			"msg":  err.Error(),
@@ -78,12 +84,20 @@ func GetToken(r *ghttp.Request) {
 	defer response.Close()
 	text := response.Text()
 	token := gjson.New(text).Get("token").String()
-	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
-	if !gstr.Contains(token, "sup=1|rid=") {
-		g.Log().Warning(ctx, getRealIP(r), token)
+	if token == "" {
+		g.Log().Error(ctx, getRealIP(r), text)
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "获取token失败",
+			"msg":  "获取token失败: " + text,
+		})
+		return
+	}
+	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
+	if !gstr.Contains(token, "sup=1|rid=") {
+		g.Log().Error(ctx, getRealIP(r), token)
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  "获取token失败: " + token,
 		})
 		return
 	}
@@ -98,6 +112,19 @@ func GetToken(r *ghttp.Request) {
 func Upload(r *ghttp.Request) {
 	ctx := r.Context()
 	// 启用认证
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		r.Response.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		r.Response.Status = 401
+		return
+	}
+	auth := strings.SplitN(authHeader, " ", 2)
+	if len(auth) != 2 || auth[0] != "Basic" {
+		r.Response.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		r.Response.Status = 401
+		return
+	}
+	g.Dump(auth)
 
 	if r.Method == "GET" {
 		r.Response.WriteTpl("upload.html")
