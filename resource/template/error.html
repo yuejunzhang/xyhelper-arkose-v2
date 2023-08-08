@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>错误提示</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f7f7f7;
+  }
+  .container {
+    max-width: 400px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .error-message {
+    color: #d9534f;
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .back-btn {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 20px;
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="error-message">上传文件失败</div>
+  <p>您选择的文件不符合要求的格式。{{.error}}</p>
+  <button class="back-btn" onclick="goBack()">返回</button>
+</div>
+
+<script>
+  function goBack() {
+    window.history.back();
+  }
+</script>
+</body>
+</html>

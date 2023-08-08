@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>上传 .har 文件</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f7f7f7;
+      }
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .upload-btn-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+      }
+      .btn {
+        border: 2px solid gray;
+        color: gray;
+        background-color: white;
+        padding: 8px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .upload-btn-wrapper input[type="file"] {
+        font-size: 100px;
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+      }
+      .file-info {
+        margin-top: 10px;
+        font-size: 14px;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+        <h2>上传 .har 文件</h2>
+        <form id="uploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+          <div class="upload-btn-wrapper">
+            <button class="btn">选择文件</button>
+            <input type="file" name="harFile" id="harFileInput" accept=".har" onchange="submitForm()" />
+          </div>
+          <p class="file-info">只允许上传 .har 格式的文件。</p>
+        </form>
+      </div>
+      
+      <script>
+        function submitForm() {
+          const form = document.getElementById('uploadForm');
+          form.submit();
+        }
+      </script>
+  </body>
+</html>
