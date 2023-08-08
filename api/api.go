@@ -10,6 +10,7 @@ import (
 
 	"gitee.com/baixudong/gospider/ja3"
 	"gitee.com/baixudong/gospider/requests"
+	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/text/gstr"
@@ -21,6 +22,14 @@ func GetToken(r *ghttp.Request) {
 	harRequest := &har.Request{}
 	config.Cache.MustGet(ctx, "request").Scan(harRequest)
 	url := harRequest.URL
+	if url == "" {
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  "url不能为空",
+		})
+		return
+	}
+
 	headers := harRequest.Headers
 	Headers := g.Map{}
 	for _, v := range headers {
@@ -68,14 +77,18 @@ func GetToken(r *ghttp.Request) {
 	}
 	defer response.Close()
 	text := response.Text()
+	token := gjson.New(text).Get("token").String()
 	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
-	if !gstr.Contains(text, "sup=1|rid=") {
+	if !gstr.Contains(token, "sup=1|rid=") {
+		g.Log().Warning(ctx, getRealIP(r), token)
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
 			"msg":  "获取token失败",
 		})
 		return
 	}
+	g.Log().Info(ctx, getRealIP(r), token)
+
 	r.Response.Status = response.StatusCode()
 	r.Response.WriteJsonExit(text)
 
@@ -111,4 +124,29 @@ func Upload(r *ghttp.Request) {
 		return
 	}
 	r.Response.WriteTpl("success.html")
+}
+func getRealIP(req *ghttp.Request) string {
+	// 优先获取Cf-Connecting-Ip
+	if ip := req.Header.Get("Cf-Connecting-Ip"); ip != "" {
+		return ip
+	}
+
+	// 优先获取X-Real-IP
+	if ip := req.Header.Get("X-Real-IP"); ip != "" {
+		return ip
+	}
+	// 其次获取X-Forwarded-For
+	if ip := req.Header.Get("X-Forwarded-For"); ip != "" {
+		return ip
+	}
+	// 最后获取RemoteAddr
+	ip := req.RemoteAddr
+	// 处理端口
+	if index := strings.Index(ip, ":"); index != -1 {
+		ip = ip[0:index]
+	}
+	if ip == "[" {
+		ip = req.GetClientIp()
+	}
+	return ip
 }
