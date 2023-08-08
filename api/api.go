@@ -111,20 +111,6 @@ func GetToken(r *ghttp.Request) {
 // Upload 上传har文件
 func Upload(r *ghttp.Request) {
 	ctx := r.Context()
-	// 启用认证
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		r.Response.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-		r.Response.Status = 401
-		return
-	}
-	auth := strings.SplitN(authHeader, " ", 2)
-	if len(auth) != 2 || auth[0] != "Basic" {
-		r.Response.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-		r.Response.Status = 401
-		return
-	}
-	g.Dump(auth)
 
 	if r.Method == "GET" {
 		r.Response.WriteTpl("upload.html")
