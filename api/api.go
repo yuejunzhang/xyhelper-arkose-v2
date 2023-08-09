@@ -130,7 +130,7 @@ func GetToken(r *ghttp.Request) {
 	r.Response.WriteJsonExit(g.Map{
 		"code":    1,
 		"msg":     "success",
-		"tokent":  token,
+		"token":   token,
 		"created": gtime.Now().Unix(),
 	})
 
