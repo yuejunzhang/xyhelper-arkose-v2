@@ -14,6 +14,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gfile"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/text/gstr"
 )
@@ -23,10 +24,10 @@ func GetToken(r *ghttp.Request) {
 	ctx := r.Context()
 	// 如果缓存中存在 fail 标识,那么就不再请求
 	if ok, err := config.Cache.Contains(ctx, "fail"); err == nil && ok {
-		g.Log().Error(ctx, getRealIP(r), "5分钟内请求失败,请稍后再试")
+		g.Log().Error(ctx, getRealIP(r), "5分钟内暂停请求,请稍后再试")
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "Fail: " + "5分钟内请求失败,请稍后再试",
+			"msg":  "Fail: " + "5分钟内暂停请求,请稍后再试",
 		})
 		return
 	}
@@ -148,11 +149,24 @@ func Upload(r *ghttp.Request) {
 	}
 	// 上传文件
 	files := r.GetUploadFiles("harFile")
-	names, err := files.Save("./temp/")
+	if len(files) == 0 {
+		r.Response.WriteTpl("error.html", g.Map{
+			"error": "请上传har文件",
+		})
+		return
+	}
+	names, err := files.Save("./temp")
 	if err != nil {
 		r.Response.WriteExit(err)
 	}
-	harRequset, err := har.Parse(ctx, "./temp/"+names[0])
+	err = gfile.Move("./temp/"+names[0], "./temp/request.har")
+	if err != nil {
+		r.Response.WriteTpl("error.html", g.Map{
+			"error": err.Error(),
+		})
+		return
+	}
+	harRequset, err := har.Parse(ctx, "./temp/request.har")
 	if err != nil {
 		r.Response.WriteTpl("error.html", g.Map{
 			"error": err.Error(),

@@ -3,7 +3,7 @@ FROM loads/alpine:3.8
 ###############################################################################
 #                                INSTALLATION
 ###############################################################################
-
+VOLUME [ "/app/temp" ]
 ENV WORKDIR                 /app
 ADD resource                $WORKDIR/resource
 ADD ./temp/linux_amd64/main $WORKDIR/main
