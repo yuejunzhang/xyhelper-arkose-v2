@@ -164,6 +164,8 @@ func Upload(r *ghttp.Request) {
 		})
 		return
 	}
+	// 移除 cache中的 fail 标识
+	config.Cache.Remove(ctx, "fail")
 	r.Response.WriteTpl("success.html")
 }
 func getRealIP(req *ghttp.Request) string {
