@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"time"
 	"xyhelper-arkose-v2/config"
 	"xyhelper-arkose-v2/har"
 
@@ -20,15 +21,25 @@ import (
 // GetToken 获取token
 func GetToken(r *ghttp.Request) {
 	ctx := r.Context()
+	// 如果缓存中存在 fail 标识,那么就不再请求
+	if ok, err := config.Cache.Contains(ctx, "fail"); err == nil && ok {
+		g.Log().Error(ctx, getRealIP(r), "5分钟内请求失败,请稍后再试")
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  "Fail: " + "5分钟内请求失败,请稍后再试",
+		})
+		return
+	}
 	harRequest := &har.Request{}
 	config.Cache.MustGet(ctx, "request").Scan(harRequest)
 	url := harRequest.URL
 	if url == "" {
+		g.Log().Error(ctx, getRealIP(r), "Pleade upload har file")
+
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
 			"msg":  "Pleade upload har file",
 		})
-		g.Log().Error(ctx, getRealIP(r), "Pleade upload har file")
 		return
 	}
 
@@ -96,6 +107,16 @@ func GetToken(r *ghttp.Request) {
 	}
 	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
 	if !gstr.Contains(token, "sup=1|rid=") {
+		// 在缓存中设置标识 fail 为 true 表示失败,时间为 5分钟,5分钟内不再请求
+		err = config.Cache.Set(ctx, "fail", true, 5*time.Minute)
+		if err != nil {
+			g.Log().Error(ctx, getRealIP(r), err.Error())
+			r.Response.WriteJsonExit(g.Map{
+				"code": 0,
+				"msg":  err.Error(),
+			})
+			return
+		}
 		g.Log().Error(ctx, getRealIP(r), token)
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
