@@ -13,6 +13,7 @@ import (
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/text/gstr"
 )
 
@@ -25,8 +26,9 @@ func GetToken(r *ghttp.Request) {
 	if url == "" {
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "url不能为空",
+			"msg":  "Pleade upload har file",
 		})
+		g.Log().Error(ctx, getRealIP(r), "Pleade upload har file")
 		return
 	}
 
@@ -88,7 +90,7 @@ func GetToken(r *ghttp.Request) {
 		g.Log().Error(ctx, getRealIP(r), text)
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "获取token失败: " + text,
+			"msg":  "Fail: " + text,
 		})
 		return
 	}
@@ -97,14 +99,19 @@ func GetToken(r *ghttp.Request) {
 		g.Log().Error(ctx, getRealIP(r), token)
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "获取token失败: " + token,
+			"msg":  "Fail: " + token,
 		})
 		return
 	}
 	g.Log().Info(ctx, getRealIP(r), token)
 
 	r.Response.Status = response.StatusCode()
-	r.Response.WriteJsonExit(text)
+	r.Response.WriteJsonExit(g.Map{
+		"code":    1,
+		"msg":     "success",
+		"tokent":  token,
+		"created": gtime.Now().Unix(),
+	})
 
 }
 
