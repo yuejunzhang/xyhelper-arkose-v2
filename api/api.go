@@ -111,6 +111,8 @@ func GetToken(r *ghttp.Request) {
 		err = config.Cache.Set(ctx, "fail", true, 5*time.Minute)
 		if err != nil {
 			g.Log().Error(ctx, getRealIP(r), err.Error())
+			// 服务暂时不可用
+			r.Response.Status = 503
 			r.Response.WriteJsonExit(g.Map{
 				"code": 0,
 				"msg":  err.Error(),
