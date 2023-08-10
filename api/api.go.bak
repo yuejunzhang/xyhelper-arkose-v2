@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -9,16 +10,14 @@ import (
 	"xyhelper-arkose-v2/har"
 	"xyhelper-arkose-v2/helper"
 
+	"gitee.com/baixudong/gospider/ja3"
+	"gitee.com/baixudong/gospider/requests"
 	"github.com/gogf/gf/v2/encoding/gjson"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gfile"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/text/gstr"
-)
-
-var (
-	client = g.Client().Proxy(config.PROXY)
 )
 
 // GetToken 获取token
@@ -49,16 +48,12 @@ func GetToken(r *ghttp.Request) {
 	}
 
 	headers := harRequest.Headers
-	Headers := g.MapStrStr{}
+	Headers := g.Map{}
 	for _, v := range headers {
 		// 如果v.Name 以 : 开头，那么就是一个特殊的请求头，需要特殊处理
 		if gstr.HasPrefix(v.Name, ":") {
 			continue
 		}
-		if gstr.Equal(v.Name, "Accept-Encoding") {
-			continue
-		}
-
 		if v.Name == "cookie" {
 			// 如果是cookie,那么就需要特殊处理, 追加一个 名称和值都随机的 cookie
 			Headers["Cookie"] = v.Value + "; " + helper.GenerateRandomString() + "=" + helper.GenerateRandomString()
@@ -66,7 +61,6 @@ func GetToken(r *ghttp.Request) {
 		}
 		Headers[v.Name] = v.Value
 	}
-	// g.Dump(Headers)
 	payload := harRequest.PostData.Text
 	// 以&分割转换为数组
 	payloadArray := gstr.Split(payload, "&")
@@ -76,8 +70,30 @@ func GetToken(r *ghttp.Request) {
 	payloadArray = append(payloadArray, "rnd="+strconv.FormatFloat(rand.Float64(), 'f', -1, 64))
 	// 以&连接数组
 	payload = strings.Join(payloadArray, "&")
-	response, err := client.SetHeaderMap(Headers).Post(ctx, url, payload)
-
+	// 生成指纹
+	Ja3Spec, err := ja3.CreateSpecWithId(ja3.HelloFirefox_Auto) //根据id 生成指纹
+	if err != nil {
+		log.Panic(err)
+	}
+	reqCli, err := requests.NewClient(ctx, requests.ClientOption{
+		Ja3Spec: Ja3Spec,
+		H2Ja3:   true,
+		Proxy:   config.PROXY,
+	})
+	if err != nil {
+		g.Log().Error(ctx, getRealIP(r), err.Error())
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	defer reqCli.Close()
+	response, err := reqCli.Request(ctx, "post", url, requests.RequestOption{
+		Headers: Headers,
+		Data:    payload,
+		Cookies: harRequest.Cookies,
+	})
 	if err != nil {
 		g.Log().Error(ctx, getRealIP(r), err.Error())
 		r.Response.WriteJsonExit(g.Map{
@@ -87,9 +103,7 @@ func GetToken(r *ghttp.Request) {
 		return
 	}
 	defer response.Close()
-	// response.RawDump()
-	text := response.ReadAllString()
-
+	text := response.Text()
 	token := gjson.New(text).Get("token").String()
 	if token == "" {
 		g.Log().Error(ctx, getRealIP(r), text)
@@ -123,7 +137,7 @@ func GetToken(r *ghttp.Request) {
 	}
 	g.Log().Info(ctx, getRealIP(r), token)
 
-	r.Response.Status = response.StatusCode
+	r.Response.Status = response.StatusCode()
 	r.Response.WriteJsonExit(g.Map{
 		"code":    1,
 		"msg":     "success",
