@@ -192,6 +192,8 @@ func Upload(r *ghttp.Request) {
 	config.Cache.Remove(ctx, "fail")
 	r.Response.WriteTpl("success.html")
 }
+
+// getRealIP 获取真实IP
 func getRealIP(req *ghttp.Request) string {
 	// 优先获取Cf-Connecting-Ip
 	if ip := req.Header.Get("Cf-Connecting-Ip"); ip != "" {
@@ -216,4 +218,41 @@ func getRealIP(req *ghttp.Request) string {
 		ip = req.GetClientIp()
 	}
 	return ip
+}
+
+// Ping ping
+func Ping(r *ghttp.Request) {
+	ctx := r.Context()
+	ok, err := config.Cache.Contains(ctx, "fail")
+	if err != nil {
+		r.Response.Status = 503
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  err.Error(),
+		})
+		return
+	}
+	if ok {
+		r.Response.Status = 503
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  "Cooldown time!",
+		})
+		return
+	}
+	harRequest := &har.Request{}
+	config.Cache.MustGet(ctx, "request").Scan(harRequest)
+	url := harRequest.URL
+	if url == "" {
+		r.Response.Status = 503
+		r.Response.WriteJsonExit(g.Map{
+			"code": 0,
+			"msg":  "Pleade upload har file",
+		})
+		return
+	}
+	r.Response.WriteJsonExit(g.Map{
+		"code": 1,
+		"msg":  "success",
+	})
 }

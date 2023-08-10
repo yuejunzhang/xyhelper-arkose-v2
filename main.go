@@ -17,6 +17,7 @@ func main() {
 	loadHarFile(ctx)
 	s := g.Server()
 	s.SetPort(config.PORT)
+	s.BindHandler("/ping", api.Ping)
 	s.BindHandler("/token", api.GetToken)
 	s.BindHandler("/upload", api.Upload)
 	s.Run()
