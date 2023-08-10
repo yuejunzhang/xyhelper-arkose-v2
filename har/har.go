@@ -57,7 +57,7 @@ func Parse(ctx g.Ctx, harFilePath string) (*Request, error) {
 	// 遍历entriesArray 查找URL包含 “fc/gt2/public_key” 的
 	for _, entry := range entriesArray {
 		if gstr.Contains(entry.Request.URL, "fc/gt2/public_key") {
-			// g.Dump(entry)
+			g.Dump(entry)
 			return &entry.Request, nil
 
 		}

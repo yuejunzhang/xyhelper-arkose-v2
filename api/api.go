@@ -8,6 +8,7 @@ import (
 	"time"
 	"xyhelper-arkose-v2/config"
 	"xyhelper-arkose-v2/har"
+	"xyhelper-arkose-v2/helper"
 
 	"gitee.com/baixudong/gospider/ja3"
 	"gitee.com/baixudong/gospider/requests"
@@ -24,10 +25,12 @@ func GetToken(r *ghttp.Request) {
 	ctx := r.Context()
 	// 如果缓存中存在 fail 标识,那么就不再请求
 	if ok, err := config.Cache.Contains(ctx, "fail"); err == nil && ok {
-		g.Log().Error(ctx, getRealIP(r), "5分钟内暂停请求,请稍后再试")
+		expire := config.Cache.MustGetExpire(ctx, "fail")
+		// g.Log().Error(ctx, getRealIP(r), "cooldown time", expire.Seconds())
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
-			"msg":  "Fail: " + "5分钟内暂停请求,请稍后再试",
+			"msg":  "Fail: cooldown time!",
+			"wait": expire.Seconds(),
 		})
 		return
 	}
@@ -51,9 +54,13 @@ func GetToken(r *ghttp.Request) {
 		if gstr.HasPrefix(v.Name, ":") {
 			continue
 		}
+		if v.Name == "cookie" {
+			// 如果是cookie,那么就需要特殊处理, 追加一个 名称和值都随机的 cookie
+			Headers["Cookie"] = v.Value + "; " + helper.GenerateRandomString() + "=" + helper.GenerateRandomString()
+			continue
+		}
 		Headers[v.Name] = v.Value
 	}
-	// g.Dump(Headers)
 	payload := harRequest.PostData.Text
 	// 以&分割转换为数组
 	payloadArray := gstr.Split(payload, "&")
@@ -109,7 +116,8 @@ func GetToken(r *ghttp.Request) {
 	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
 	if !gstr.Contains(token, "sup=1|rid=") {
 		// 在缓存中设置标识 fail 为 true 表示失败,时间为 5分钟,5分钟内不再请求
-		err = config.Cache.Set(ctx, "fail", true, 5*time.Minute)
+		wait := g.Cfg().MustGetWithEnv(ctx, "WAIT", "300").Int()
+		err = config.Cache.Set(ctx, "fail", true, time.Duration(wait)*time.Second)
 		if err != nil {
 			g.Log().Error(ctx, getRealIP(r), err.Error())
 			// 服务暂时不可用
