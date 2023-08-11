@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"log"
 	"math/rand"
 	"strconv"
@@ -19,6 +20,29 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/text/gstr"
 )
+
+var (
+	Ja3Spec ja3.ClientHelloSpec
+	reqCli  *requests.Client
+)
+
+func init() {
+	// ctx := gctx.GetInitCtx()
+	// 生成指纹
+	Ja3Spec, err := ja3.CreateSpecWithId(ja3.HelloFirefox_Auto) //根据id 生成指纹
+	if err != nil {
+		log.Panic(err)
+	}
+	reqCli, err = requests.NewClient(context.TODO(), requests.ClientOption{
+		Ja3Spec: Ja3Spec,
+		H2Ja3:   true,
+		Proxy:   config.PROXY,
+	})
+	if err != nil {
+		log.Panic(err)
+	}
+	// ReqCli = reqCli
+}
 
 // GetToken 获取token
 func GetToken(r *ghttp.Request) {
@@ -70,25 +94,10 @@ func GetToken(r *ghttp.Request) {
 	payloadArray = append(payloadArray, "rnd="+strconv.FormatFloat(rand.Float64(), 'f', -1, 64))
 	// 以&连接数组
 	payload = strings.Join(payloadArray, "&")
-	// 生成指纹
-	Ja3Spec, err := ja3.CreateSpecWithId(ja3.HelloFirefox_Auto) //根据id 生成指纹
-	if err != nil {
-		log.Panic(err)
-	}
-	reqCli, err := requests.NewClient(ctx, requests.ClientOption{
-		Ja3Spec: Ja3Spec,
-		H2Ja3:   true,
-		Proxy:   config.PROXY,
-	})
-	if err != nil {
-		g.Log().Error(ctx, getRealIP(r), err.Error())
-		r.Response.WriteJsonExit(g.Map{
-			"code": 0,
-			"msg":  err.Error(),
-		})
-		return
-	}
-	defer reqCli.Close()
+
+	defer func() {
+		reqCli.CloseIdleConnections()
+	}()
 	response, err := reqCli.Request(ctx, "post", url, requests.RequestOption{
 		Headers: Headers,
 		Data:    payload,
