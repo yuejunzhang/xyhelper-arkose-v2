@@ -12,7 +12,8 @@ type HAR struct {
 }
 
 type Entries struct {
-	Request Request `json:"request"`
+	Request         Request `json:"request"`
+	StartedDateTime string  `json:"startedDateTime"`
 }
 
 type Request struct {
@@ -51,6 +52,8 @@ func Parse(ctx g.Ctx, harFilePath string) (*Request, error) {
 	content := gfile.GetContents(harFilePath)
 	hdrJson := gjson.New(content)
 	entries := hdrJson.GetJson("log.entries")
+	// entries.Dump()
+
 	var entriesArray []Entries
 	entries.Scan(&entriesArray)
 

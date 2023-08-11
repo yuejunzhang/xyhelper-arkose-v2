@@ -47,6 +47,12 @@ func init() {
 // GetToken 获取token
 func GetToken(r *ghttp.Request) {
 	ctx := r.Context()
+	// 生成带超时的context
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer func() {
+		// g.Log().Info(ctx, "timeout", "cancel")
+		cancel()
+	}()
 	// 如果缓存中存在 fail 标识,那么就不再请求
 	if ok, err := config.Cache.Contains(ctx, "fail"); err == nil && ok {
 		expire := config.Cache.MustGetExpire(ctx, "fail")
