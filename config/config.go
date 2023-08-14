@@ -7,14 +7,15 @@ import (
 )
 
 var (
-	PORT  = 8080
-	PROXY = ""
-	Cache = gcache.New()
+	PORT    = 8080
+	PROXY   = ""
+	Cache   = gcache.New()
+	AUTHKEY = g.Cfg().MustGetWithEnv(gctx.GetInitCtx(), "AUTHKEY").String()
 )
 
 func init() {
 	ctx := gctx.GetInitCtx()
-	port := g.Cfg().MustGetWithEnv(ctx, "port").Int()
+	port := g.Cfg().MustGetWithEnv(ctx, "PORT").Int()
 	if port > 0 {
 		PORT = port
 	}

@@ -47,6 +47,17 @@ func init() {
 // GetToken 获取token
 func GetToken(r *ghttp.Request) {
 	ctx := r.Context()
+	if config.AUTHKEY != "" {
+		authkey := r.Get("authkey").String()
+		if authkey != config.AUTHKEY {
+			r.Response.WriteJsonExit(g.Map{
+				"code": 0,
+				"msg":  "Fail: authkey error!",
+			})
+			return
+		}
+	}
+
 	// 生成带超时的context
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer func() {
@@ -131,8 +142,19 @@ func GetToken(r *ghttp.Request) {
 	// 如果不包含 sup=1|rid= 的字符串,那么就是失败了
 	if !gstr.Contains(token, "sup=1|rid=") {
 		// 在缓存中设置标识 fail 为 true 表示失败,时间为 5分钟,5分钟内不再请求
-		wait := g.Cfg().MustGetWithEnv(ctx, "WAIT", "300").Int()
-		err = config.Cache.Set(ctx, "fail", true, time.Duration(wait)*time.Second)
+		wait := g.Cfg().MustGetWithEnv(ctx, "WAIT", "300").String()
+		waitDuration, err := time.ParseDuration(wait + "s")
+		if err != nil {
+			g.Log().Error(ctx, getRealIP(r), err.Error())
+			// 服务暂时不可用
+			r.Response.Status = 503
+			r.Response.WriteJsonExit(g.Map{
+				"code": 0,
+				"msg":  err.Error(),
+			})
+			return
+		}
+		err = config.Cache.Set(ctx, "fail", true, waitDuration)
 		if err != nil {
 			g.Log().Error(ctx, getRealIP(r), err.Error())
 			// 服务暂时不可用
