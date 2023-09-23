@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"math/rand"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +23,7 @@ import (
 )
 
 var (
-	Ja3Spec ja3.ClientHelloSpec
+	Ja3Spec ja3.Ja3Spec
 	reqCli  *requests.Client
 )
 
@@ -58,12 +59,6 @@ func GetToken(r *ghttp.Request) {
 		}
 	}
 
-	// 生成带超时的context
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer func() {
-		// g.Log().Info(ctx, "timeout", "cancel")
-		cancel()
-	}()
 	// 如果缓存中存在 fail 标识,那么就不再请求
 	if ok, err := config.Cache.Contains(ctx, "fail"); err == nil && ok {
 		expire := config.Cache.MustGetExpire(ctx, "fail")
@@ -77,8 +72,8 @@ func GetToken(r *ghttp.Request) {
 	}
 	harRequest := &har.Request{}
 	config.Cache.MustGet(ctx, "request").Scan(harRequest)
-	url := harRequest.URL
-	if url == "" {
+	requrl := harRequest.URL
+	if requrl == "" {
 		g.Log().Error(ctx, getRealIP(r), "Pleade upload har file")
 
 		r.Response.WriteJsonExit(g.Map{
@@ -95,16 +90,20 @@ func GetToken(r *ghttp.Request) {
 		if gstr.HasPrefix(v.Name, ":") {
 			continue
 		}
-		if v.Name == "cookie" {
+		if v.Name == "cookie" || v.Name == "Cookie" {
 			// 如果是cookie,那么就需要特殊处理, 追加一个 名称和值都随机的 cookie
-			Headers["Cookie"] = v.Value + "; " + helper.GenerateRandomString() + "=" + helper.GenerateRandomString()
+			Headers[v.Name] = v.Value + "; " + helper.GenerateRandomString() + "=" + helper.GenerateRandomString()
 			continue
 		}
 		Headers[v.Name] = v.Value
 	}
+	bda := har.GetBdaWitBx(harRequest.BX, harRequest.BV)
+
 	payload := harRequest.PostData.Text
 	// 以&分割转换为数组
 	payloadArray := gstr.Split(payload, "&")
+	// 替换 bda= 的值
+	payloadArray[0] = "bda=" + url.QueryEscape(bda)
 	// 移除最后一个元素
 	payloadArray = payloadArray[:len(payloadArray)-1]
 	// 将 rnd=0.3046791926621015 添加到数组最后
@@ -115,7 +114,7 @@ func GetToken(r *ghttp.Request) {
 	defer func() {
 		reqCli.CloseIdleConnections()
 	}()
-	response, err := reqCli.Request(ctx, "post", url, requests.RequestOption{
+	response, err := reqCli.Request(ctx, "post", requrl, requests.RequestOption{
 		Headers: Headers,
 		Data:    payload,
 		Cookies: harRequest.Cookies,
@@ -279,8 +278,8 @@ func Ping(r *ghttp.Request) {
 	}
 	harRequest := &har.Request{}
 	config.Cache.MustGet(ctx, "request").Scan(harRequest)
-	url := harRequest.URL
-	if url == "" {
+	requrl := harRequest.URL
+	if requrl == "" {
 		r.Response.Status = 503
 		r.Response.WriteJsonExit(g.Map{
 			"code": 0,
