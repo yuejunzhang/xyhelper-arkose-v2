@@ -110,6 +110,7 @@ func Parse(ctx g.Ctx, harFilePath string) (harRequest *Request, err error) {
 			entry.Request.BX = arkBx
 			entry.Request.BV = arkBody.Get("userbrowser")
 			g.Dump(entry)
+			gjson.New(entry.Request.BX).Dump()
 			return &entry.Request, nil
 		}
 	}

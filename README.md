@@ -11,6 +11,9 @@
 
 ## 加入交流群
 
+Telegram：https://t.me/xyhelper
+
+[![Telegram](https://img.shields.io/badge/Telegram-join%20chat-blue.svg)](https://t.me/xyhelper)
 
 
 ![微信](https://xyhelper.github.io/xyhelperkf.png)
