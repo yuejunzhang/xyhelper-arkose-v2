@@ -135,7 +135,7 @@ func GetBdaWitBx(bx, bv string) string {
 	for i := 0; i < len(bxArray); i++ {
 		// n 时间戳
 		if bxArray[i].Key == "n" {
-			n := gbase64.EncodeString(gconv.String(gtime.Now().UnixMicro()))
+			n := gbase64.EncodeString(gconv.String(gtime.Now().Unix()))
 			bxjson.Set(gconv.String(i)+".value", n)
 		}
 
