@@ -1,8 +1,8 @@
 module xyhelper-arkose-v2
 
-go 1.21
+go 1.20
 
-toolchain go1.21.1
+<!-- toolchain go1.21.1 -->
 
 require (
 	gitee.com/baixudong/gospider v0.0.0-20230921082009-c517167e3a49
